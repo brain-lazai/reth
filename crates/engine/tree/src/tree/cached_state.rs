@@ -5,10 +5,7 @@ use mini_moka::sync::CacheBuilder;
 use reth_errors::ProviderResult;
 use reth_metrics::Metrics;
 use reth_primitives_traits::{Account, Bytecode};
-use reth_provider::{
-    AccountReader, BlockHashReader, HashedPostStateProvider, StateProofProvider, StateProvider,
-    StateRootProvider, StorageRootProvider,
-};
+use reth_provider::{AccountReader, BlockHashReader, HashedPostStateProvider, LatestStateProvider, StateProofProvider, StateProvider, StateRootProvider, StorageRootProvider};
 use reth_revm::db::BundleState;
 use reth_trie::{
     updates::TrieUpdates, AccountProof, HashedPostState, HashedStorage, MultiProof,
@@ -21,6 +18,23 @@ use tracing::trace;
 pub(crate) type Cache<K, V> =
     mini_moka::sync::Cache<K, V, alloy_primitives::map::DefaultHashBuilder>;
 
+
+/// A wrapper of a state provider and a shared cache.
+pub(crate) struct GlobalCachedStateProvider<S> {
+    /// The state provider
+    state_provider: S,
+
+    /// The caches used for the provider
+    global_caches: GlobalCachedState,
+}
+pub(crate) struct GlobalCachedState {
+    /// The caches used for the provider
+    caches: ProviderCaches,
+
+    /// Metrics for the cached state provider
+    metrics: CachedStateMetrics,
+}
+
 /// A wrapper of a state provider and a shared cache.
 pub(crate) struct CachedStateProvider<S> {
     /// The state provider
@@ -32,6 +46,7 @@ pub(crate) struct CachedStateProvider<S> {
     /// Metrics for the cached state provider
     metrics: CachedStateMetrics,
 }
+
 
 impl<S> CachedStateProvider<S>
 where
